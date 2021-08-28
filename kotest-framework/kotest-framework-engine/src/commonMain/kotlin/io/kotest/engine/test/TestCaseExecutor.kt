@@ -1,5 +1,6 @@
 package io.kotest.engine.test
 
+import io.kotest.core.config.configuration
 import io.kotest.core.test.TestCase
 import io.kotest.core.test.TestContext
 import io.kotest.core.test.TestResult
@@ -15,6 +16,8 @@ import io.kotest.engine.test.extensions.LifecycleTestExecutionFilter
 import io.kotest.engine.test.extensions.SupervisorScopeTestExecutionFilter
 import io.kotest.engine.test.extensions.TestCaseInterceptionTestExecutionFilter
 import io.kotest.engine.test.extensions.TimeoutTestExecutionFilter
+import io.kotest.engine.test.extensions.CoroutineLoggingTestExecutionExtension
+import io.kotest.engine.test.extensions.TestExecutionFilter
 import io.kotest.mpp.log
 import io.kotest.mpp.timeInMillis
 
@@ -34,7 +37,7 @@ class TestCaseExecutor(
 
       val start = timeInMillis()
 
-      val pipeline = listOf(
+      val pipeline: List<TestExecutionFilter> = listOf(
          CoroutineDebugProbeTestExecutionFilter,
          TestCaseInterceptionTestExecutionFilter,
          EnabledCheckTestExecutionFilter,
@@ -46,6 +49,8 @@ class TestCaseExecutor(
          AssertionModeTestExecutionFilter,
          GlobalSoftAssertTestExecutionFilter,
          CoroutineScopeTestExecutionFilter,
+      ) + listOfNotNull(
+         if (configuration.logLevel.isDisabled()) null else CoroutineLoggingTestExecutionExtension
       )
 
       val innerExecute: suspend (TestCase, TestContext) -> TestResult = { tc, ctx ->
