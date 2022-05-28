@@ -7,7 +7,7 @@ kotlin {
 
    targets {
       jvm()
-      js(BOTH) {
+      js(IR) {
          browser()
          nodejs()
       }
