@@ -43,19 +43,16 @@ class KotestMultiplatformCompilerGradlePluginSpec : ShouldSpec({
             """.trimIndent()
          }
 
-         should("be able to compile and run tests for all platforms supported by the host machine") {
+         should("be able to compile and run tests for the JVM and JS targets") {
             val invocation = GradleInvocation(
                testProjectPath,
                listOf(
                   "-PkotlinVersion=$kotlinVersion",
                   "-PkotestVersion=$kotestVersion",
+                  "-PuseNewNativeMemoryModel=false",
                   "jvmTest",
                   "jsBrowserTest",
                   "jsNodeTest",
-                  "macosArm64Test",
-                  "macosX64Test",
-                  "mingwX64Test",
-                  "linuxX64Test"
                )
             )
 
@@ -64,15 +61,41 @@ class KotestMultiplatformCompilerGradlePluginSpec : ShouldSpec({
             shouldHavePassingTestResultsFor("jvmTest")
             shouldHavePassingTestResultsFor("jsBrowserTest")
             shouldHavePassingTestResultsFor("jsNodeTest")
+         }
 
-            setOf(
-               "mingwX64Test",
-               "macosX64Test",
-               "macosArm64Test",
-               "linuxX64Test"
-            ).forAtLeastOne { taskName ->
-               // Depending on the host machine these tests are running on, only one of the test targets will be built and executed.
-               shouldHavePassingTestResultsFor(taskName)
+         setOf(
+            true,
+            false
+         ).forEach { enableNewMemoryModel ->
+            val description = if (enableNewMemoryModel) "is enabled" else "is not enabled"
+
+            context("when the new Kotlin/Native memory model $description") {
+               should("be able to compile and run tests for all native targets supported by the host machine") {
+                  val invocation = GradleInvocation(
+                     testProjectPath,
+                     listOf(
+                        "-PkotlinVersion=$kotlinVersion",
+                        "-PkotestVersion=$kotestVersion",
+                        "-PuseNewNativeMemoryModel=$enableNewMemoryModel",
+                        "macosArm64Test",
+                        "macosX64Test",
+                        "mingwX64Test",
+                        "linuxX64Test"
+                     )
+                  )
+
+                  invocation.run()
+
+                  setOf(
+                     "mingwX64Test",
+                     "macosX64Test",
+                     "macosArm64Test",
+                     "linuxX64Test"
+                  ).forAtLeastOne { taskName ->
+                     // Depending on the host machine these tests are running on, only one of the test targets will be built and executed.
+                     shouldHavePassingTestResultsFor(taskName)
+                  }
+               }
             }
          }
       }
